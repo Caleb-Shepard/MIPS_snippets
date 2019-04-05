@@ -1,0 +1,206 @@
+# **************************************************************************** #
+#                                                                              #
+#                                                             |\               #
+#    lab_four.asm                                       ------| \----          #
+#                                                       |    \`  \  |  p       #
+#    By: cshepard6055 <cshepard6055@floridapoly.edu>    |  \`-\   \ |  o       #
+#                                                       |---\  \   `|  l       #
+#    Created: 2019/02/23 11:23:46 by cshepard6055       | ` .\  \   |  y       #
+#    Updated: 2019/02/23 12:06:17 by cshepard6055       -------------          #
+#                                                                              #
+# **************************************************************************** #
+
+# $t0 and $t1 are used as input and output registers for functions
+# $t2 and $t3 are used as temporary storage for other operations
+# $t4 is used within functions as a tmp value when others must remain
+# $s0 and $s1 are used to store inputs n and r, respectively
+# $s3 is used to store the result of nCr = n! / ((n-r)! * r!)
+# $ra, of course, is used to store a PC address (execution return)
+
+# Define constant numerical values
+.eqv SYSCALL_PRINT_STRING 4
+.eqv SYSCALL_PRINT_INT    1
+.eqv SYSCALL_READ_INT     5
+.eqv SYSCALL_EXIT         10
+
+# Define string constants
+.data
+s_header_0:             .asciiz "\nThe purpose of this program is to compute the value of  "
+s_header_1:             .asciiz "\nn! / ((n-r)! * r!)\n"
+
+s_input_n_prompt:       .asciiz "\nInput n: "
+s_input_r_prompt:       .asciiz "\nInput r: "
+s_resulting_value:      .asciiz "\nThe resulting value is: "
+e_dividing_by_zero:     .asciiz "\nCannot divide a number by zero!"
+e_negative_factorial:   .asciiz "\nCannot compute the factorial value of a negative number!"
+
+.text
+j main
+
+# Take the number loaded into $t0 and find its factorial, store back into $t0
+# The factorial of 0 is 1, the factorial of 1 is 1, negative input crashes
+factorial:
+      # if input is negative, throw error and discontinue program
+      addi $t4, $t4, 0
+      slt $t4, $t0, $0
+      bne $t4, $0, negative_factorial_input
+
+      # if input == 0 or input == 1, return 1
+      addi $t4, $t4, 0
+      beq $t0, $t4, factorial_base_case
+      addi $t4, $t4, 1
+      beq $t0, $t4, factorial_base_case
+
+      # else decrement and multiply down to 2 inclusive, or 1 exclusive
+      addi $t4, $t0, -1
+      addi $t5, $0,  1
+      factorial_loop:
+            addi $t4, $t4, -1
+            beq $t4, $t5, factorial_loop_done
+            mult $t0, $t4
+            mflo $t0
+            j factorial_loop
+      factorial_loop_done:
+
+      # result in $t0, return
+      jr $ra
+
+      # if input == 0 or input == 1, return 1
+      factorial_base_case:
+            addi $t0, $t0, 1
+            # result in $t0, return
+            jr $ra
+
+# take the difference of numbers in $t0 and $t1, store into $t0
+difference:
+      # $t0 = $t0 - $t1
+      sub $t0, $t0, $t1
+
+      # result in $t0, return
+      jr $ra
+
+# take the quotient of numbers in $t0 and $t1, store into $t0
+quotient:
+      # if $t1 == 0, throw error and discontinue program
+      beq, $t1, 0, dividing_by_zero
+
+      # $t0 = $t0 / $t1
+      div $t0, $t1
+      # remainder moved into $t0, return
+      mfhi $t0
+
+      # result in $t0
+      jr $ra
+
+# take the product of numbers in $t0 and $t1, store into $t0
+product:
+      # $t0 = $t0 * $t1
+      mult $t0, $t1 # Multiply the numbers stored in these registers.
+      mflo $t0      # t0 = the lower 32 bits from the product register
+
+      # result in $t0, return
+      jr $ra
+
+# Print error saying that the fibbonacci function will not accept negatives, exit
+negative_factorial_input:
+      li $v0, SYSCALL_PRINT_STRING
+      la $a0, e_negative_factorial
+      syscall
+      j exit
+
+# Print error saying that the fibbonacci function will not accept negatives, exit
+dividing_by_zero:
+      li $v0, SYSCALL_PRINT_STRING
+      la $a0, e_dividing_by_zero
+      syscall
+      j exit
+
+# prints the resulting value stored in $t0
+print_result:
+      # Print out our prompt
+      la $a0, s_resulting_value
+      jal print_string
+
+      # Printing out the number
+      li $v0, SYSCALL_PRINT_INT
+      move $a0, $t0
+      syscall
+
+      jr $ra
+
+# print our program header to inform the user of its function
+print_header:
+      li  $v0, SYSCALL_PRINT_STRING
+      la $a0, s_header_0
+      syscall
+      li  $v0, SYSCALL_PRINT_STRING
+      la $a0, s_header_1
+      syscall
+
+      jr $ra
+
+# Print a string stored in $a0
+print_string:
+      li $v0, SYSCALL_PRINT_STRING
+      syscall
+      jr $ra
+
+# main body of our program: compute nCr = n! / ((n-r)! * r!) 
+main:
+      # print our header to inform the user of program function
+      jal print_header
+
+      # print prompt asking for n
+      la $a0, s_input_n_prompt
+      jal print_string
+      # input n to register s0
+      li $v0, SYSCALL_READ_INT
+      syscall
+      move $s0, $v0
+
+      # print prompt asking for r
+      la $a0, s_input_r_prompt
+      jal print_string
+      # input n to register s1
+      li $v0, SYSCALL_READ_INT
+      syscall
+      move $s1, $v0
+
+      # compute r!
+      addi $t0, $s1, 0
+      jal factorial
+      # store into $t2 for our product call later
+      addi $t2, $t0, 0
+
+      # compute (n-r)!
+      add $t0, $s0, $s1
+      jal difference
+      jal factorial
+      # store into $t3 for our product call later
+      addi $t3, $t0, 0
+
+      # compute r! * (n-r)!
+      addi $t0, $t2, 0
+      addi $t1, $t3, 0
+      jal product
+      # store the product into t1 for our quotient call later
+      addi $t1, $t0, 0
+
+      # compute n!
+      addi $t0, $s0, 0
+      jal factorial
+
+      # compute nCr = n! / ((n-r)! * r!)
+      # our numerator was previously output into   $t0
+      # our denominator was previously loaded into $t1
+      jal quotient
+
+      # print the result of our calculation, stored into $t0
+      jal print_result
+
+      # exit the program
+      j exit
+
+exit:
+      li $v0, SYSCALL_EXIT
+      syscall

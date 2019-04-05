@@ -1,0 +1,57 @@
+# accept a number from 1-100 from the user and print sum from 0 .. N
+
+.data # define prompts
+
+input_prompt:            .asciiz    "Enter a number between 0-100: "
+output_prompt:           .asciiz  "\nThe sum of all numbers from 0 to N is "
+
+error_result:            .asciiz  "\n000000"
+
+
+.text # begin program
+
+# print prompt asking for N
+li $v0, 4
+la $a0, input_prompt
+syscall
+# input N to register s0
+li $v0, 5
+syscall
+move $s0, $v0
+
+# if the number is greater than 100, jump to error
+addi $t0, $0, 100
+addi $t1, $0, 0
+slt $t1, $t0, $s0
+beq $t1, 1, error
+
+# Main logic of the program
+addi $t0, $0, 0          # int i = 0
+addi $s1, $0, 0          # instantiate the sum
+
+loop:
+    beq $t0, $s0, output # while i != N
+    add $s1, $t0, $s1    #     sum += i
+    addi $t0, $t0, 1     #       i += 1
+
+    j loop
+
+error:
+    li $v0, 4
+    la $a0, error_result
+    syscall
+
+    j done
+
+output:
+    li $v0, 4
+    la $a0, output_prompt
+    syscall
+
+    li $v0, 1
+    move $a0, $s1
+    syscall
+
+    j done
+
+done:

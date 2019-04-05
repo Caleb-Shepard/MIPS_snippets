@@ -1,0 +1,78 @@
+# accept three numbers from the user and tell user greatest number
+
+# a, b, c are t0, t1, and t2
+# a max, b max, and c max are t3, t4, and t5
+
+.data # define prompts
+
+a_prompt: .asciiz         "Enter the value for a: "
+b_prompt: .asciiz       "\nEnter the value for b: "
+c_prompt: .asciiz       "\nEnter the value for c: "
+
+a_result: .asciiz       "\na is the greatest number"
+b_result: .asciiz       "\nb is the greatest number"
+c_result: .asciiz       "\nc is the greatest number"
+
+error_result: .asciiz   "error; some numbers may be equivalent"
+
+
+.text # begin program
+
+# get input for a
+li $v0, 4
+la $a0, a_prompt
+syscall
+li $v0, 5
+syscall
+move $t0, $v0
+# get input for b
+li $v0, 4
+la $a0, b_prompt
+syscall
+li $v0, 5
+syscall
+move $t1, $v0
+# get input for c
+li $v0, 4
+la $a0, c_prompt
+syscall
+li $v0, 5
+syscall
+move $t2, $v0
+
+# This lab required slt; this is more verbose than neccessary
+slt $t3, $t0, $t1   # t1 greatest
+slt $t4, $t1, $t2   # t2 greatest
+slt $t5, $t2, $t0   # t0 greatest
+
+# Look for the only result that results in 0; looking 
+# for the converse is the fastest case (for whichever
+# case fails, take the opposite number
+bne $t3, 1, result_a
+bne $t4, 1, result_b
+bne $t5, 1, result_c
+j error             # some numbers are equivalent
+
+# Switch case style conditional block to print our result
+result_a:
+    li $v0, 4
+    la $a0, a_result
+    syscall
+j done
+result_b:
+    li $v0, 4
+    la $a0, b_result
+    syscall
+j done
+result_c:
+    li $v0, 4
+    la $a0, c_result 
+    syscall
+j done
+error:
+    li $v0, 4
+    la $a0, error_result
+    syscall
+j done
+
+done:
