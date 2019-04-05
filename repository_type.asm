@@ -1,1 +1,1 @@
-File to force GitHub to recognize the repository as assembly code.
+File to make GitHub recognize the repository as assembly code.
